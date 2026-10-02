@@ -2,7 +2,15 @@
 
 export { createMeshRunner } from './runner';
 export { createMeshAnimationRunner } from './animationRunner';
-export { DEFAULT_MESH_CONFIG, MESH_POLYGON_DEFAULTS, MESH_QUALITY_PRESETS, checkMeshConfig, type MeshQuality } from './config';
+export {
+  DEFAULT_MESH_CONFIG,
+  MESH_POLYGON_DEFAULTS,
+  MESH_QUALITY_PRESETS,
+  MIN_MESH_POINTS,
+  checkMeshConfig,
+  maxMeshPoints,
+  type MeshQuality,
+} from './config';
 export { frameSeed, parseMeshAnimationJSON, parseMeshJSON } from './animationPlan';
 export { drawMesh } from './drawMesh';
 export { meshToSVG } from './toSVG';

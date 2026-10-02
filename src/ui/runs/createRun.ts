@@ -15,6 +15,7 @@ import { createShapesPicture } from './shapesPicture';
 import { createShapesAnimation } from './shapesAnimation';
 import { createMeshPicture } from './meshPicture';
 import { createMeshAnimation } from './meshAnimation';
+import { fitMeshPoints, pointsNote } from './fitPoints';
 
 export interface RunChoice {
   style: Style;
@@ -33,8 +34,13 @@ export function createRun(choice: RunChoice, context: RunContext, loop: LoopCont
       ? createShapesAnimation(context, choice.config, choice.animation, loop)
       : createShapesPicture(context, choice.config);
   }
-  // Triangle mesh and polygon mosaic: meshConfig.cells says which.
-  return choice.output === 'animation'
-    ? createMeshAnimation(context, choice.style, choice.meshConfig, choice.meshAnimation, loop)
-    : createMeshPicture(context, choice.style, choice.meshConfig);
+  // Triangle mesh and polygon mosaic: meshConfig.cells says which. A small
+  // picture can hold only so many points; use the most it can (and say so).
+  const fitted = fitMeshPoints(choice.meshConfig, context.target.width, context.target.height);
+  const run =
+    choice.output === 'animation'
+      ? createMeshAnimation(context, choice.style, fitted.config, choice.meshAnimation, loop)
+      : createMeshPicture(context, choice.style, fitted.config);
+  run.note = pointsNote(fitted);
+  return run;
 }

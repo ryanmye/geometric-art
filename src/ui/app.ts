@@ -77,6 +77,7 @@ export function startApp(): void {
   const exportButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('button[id^="export-"]'));
   const exportSize = byId<HTMLSelectElement>('export-size');
   const exportStatus = byId('export-status');
+  const runNote = byId('run-note');
   const photoName = byId('photo-name');
   const errorBox = byId('error');
   const errorText = byId('error-text');
@@ -131,6 +132,9 @@ export function startApp(): void {
 
   function updateStats(): void {
     stats.show(run ? run.stats(clock.elapsedMs()) : null);
+    const note = run?.note ?? null;
+    runNote.textContent = note ?? '';
+    runNote.hidden = note === null;
   }
 
   function showError(message: string): void {

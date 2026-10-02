@@ -281,6 +281,8 @@ input[type='checkbox'] {
 .segmented label {
   flex: 1;
   position: relative;
+  /* Stretch each choice to the row's height, even when another one wraps. */
+  display: flex;
 }
 
 .segmented input {
@@ -291,7 +293,10 @@ input[type='checkbox'] {
 }
 
 .segmented span {
-  display: block;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 6px 4px;
   text-align: center;
   cursor: pointer;

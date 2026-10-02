@@ -51,6 +51,8 @@ export interface ActiveRun {
   pictureExports(): PictureExports | null;
   /** What the animation export buttons save, or null if fewer than two frames are done (or not an animation). */
   animationExports(): AnimationExports | null;
+  /** A quiet note about the run for the page to show, e.g. that fewer points were used than asked. */
+  note?: string | null;
   /** The run's result so far, for checking from scripts. */
   snapshot(): RunResult | AnimationResult | MeshResult | MeshAnimationResult;
 }

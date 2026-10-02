@@ -39,6 +39,17 @@ export const MESH_QUALITY_PRESETS: Record<MeshQuality, Pick<MeshConfig, 'generat
   fine: { generations: 2000 },
 };
 
+/** The fewest points a mesh can have. */
+export const MIN_MESH_POINTS = 8;
+
+/**
+ * The most points a mesh can have on a width x height target: points sit on
+ * whole-pixel positions, so one per pixel corner, (width + 1) * (height + 1).
+ */
+export function maxMeshPoints(width: number, height: number): number {
+  return (width + 1) * (height + 1);
+}
+
 /** Throw a readable error if the config cannot be used with this target. */
 export function checkMeshConfig(target: Bitmap, config: MeshConfig): void {
   const { width, height } = target;
@@ -52,9 +63,9 @@ export function checkMeshConfig(target: Bitmap, config: MeshConfig): void {
   if (!Number.isInteger(config.seed) || config.seed < 0 || config.seed > 0xffffffff) {
     throw new Error('seed must be an integer from 0 to 4294967295');
   }
-  const room = (width + 1) * (height + 1);
-  if (!Number.isInteger(config.points) || config.points < 8 || config.points > room) {
-    throw new Error(`points must be a whole number from 8 to ${room} for a ${width}x${height} target`);
+  const room = maxMeshPoints(width, height);
+  if (!Number.isInteger(config.points) || config.points < MIN_MESH_POINTS || config.points > room) {
+    throw new Error(`points must be a whole number from ${MIN_MESH_POINTS} to ${room} for a ${width}x${height} target`);
   }
   if (!(config.borderDensity >= 0 && config.borderDensity <= 4)) throw new Error('borderDensity must be from 0 to 4');
   if (!Number.isInteger(config.generations) || config.generations < 0) {
