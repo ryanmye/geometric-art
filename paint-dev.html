@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Paint mask - dev</title>
+    <style>
+      :root {
+        --bg: #f6f5f2;
+        --text: #1d1d1f;
+        --muted: #6b6b70;
+        --line: #e2e0dc;
+        --accent: #2f5bd3;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #141416;
+          --text: #ececef;
+          --muted: #9a9aa2;
+          --line: #2e2e33;
+          --accent: #6d8ff0;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.45 system-ui, -apple-system, sans-serif;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 12px;
+      }
+      /* The "host" element stands in for wherever the real page puts the
+         picture canvas: it must be positioned, so the painter's overlay
+         canvas (position: absolute) lines up with it. */
+      #host {
+        position: relative;
+        width: 480px;
+        height: 480px;
+        background: #000;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 8px 24px rgb(0 0 0 / 8%);
+      }
+      #host img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 220px;
+      }
+      .controls label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      button {
+        padding: 6px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--bg);
+        color: var(--text);
+        font: inherit;
+        cursor: pointer;
+      }
+      button.active {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      canvas#preview {
+        background: #333;
+        image-rendering: pixelated;
+        width: 160px;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 8%), 0 8px 24px rgb(0 0 0 / 8%);
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <h1>Picture (host)</h1>
+      <div id="host">
+        <img id="photo" src="samples/mona-lisa.jpg" alt="Sample photo" />
+      </div>
+    </div>
+
+    <div class="controls">
+      <h1>Controls</h1>
+
+      <label>
+        Brush size (<span id="brush-size-value"></span>)
+        <input type="range" id="brush-size" min="0.02" max="0.3" step="0.01" value="0.08" />
+      </label>
+
+      <div class="row">
+        <button id="mode-paint" class="active">Paint</button>
+        <button id="mode-erase">Erase</button>
+      </div>
+
+      <div class="row">
+        <button id="toggle-enabled">Disable painting</button>
+        <button id="toggle-visible">Hide mask</button>
+      </div>
+
+      <button id="clear">Clear</button>
+
+      <p id="status" style="color: var(--muted)"></p>
+
+      <h1>Raw mask (working size)</h1>
+      <canvas id="preview"></canvas>
+    </div>
+
+    <script type="module">
+      import { createMaskPainter } from './src/paint/maskPainter.ts';
+
+      const host = document.getElementById('host');
+      const photo = document.getElementById('photo');
+      const status = document.getElementById('status');
+
+      // Working size: the size the real search runs at. The sample photo is
+      // not square, so pick a size matching its aspect ratio once it loads.
+      function start() {
+        const width = 256;
+        const height = Math.round((photo.naturalHeight / photo.naturalWidth) * width);
+
+        const painter = createMaskPainter(host, {
+          width,
+          height,
+          brushSize: 0.08,
+          onChange: () => {
+            status.textContent = `changed (painted: ${isPainted()})`;
+            drawPreview();
+          },
+        });
+
+        // Expose for the headless checks and for poking at from the console.
+        window.painter = painter;
+
+        function isPainted() {
+          for (let i = 0; i < painter.mask.length; i++) if (painter.mask[i] !== 0) return true;
+          return false;
+        }
+
+        const brushSizeInput = document.getElementById('brush-size');
+        const brushSizeValue = document.getElementById('brush-size-value');
+        function updateBrushLabel() {
+          brushSizeValue.textContent = Number(brushSizeInput.value).toFixed(2);
+        }
+        updateBrushLabel();
+        brushSizeInput.addEventListener('input', () => {
+          painter.setBrushSize(Number(brushSizeInput.value));
+          updateBrushLabel();
+        });
+
+        const modePaint = document.getElementById('mode-paint');
+        const modeErase = document.getElementById('mode-erase');
+        modePaint.addEventListener('click', () => {
+          painter.setErasing(false);
+          modePaint.classList.add('active');
+          modeErase.classList.remove('active');
+        });
+        modeErase.addEventListener('click', () => {
+          painter.setErasing(true);
+          modeErase.classList.add('active');
+          modePaint.classList.remove('active');
+        });
+
+        const toggleEnabled = document.getElementById('toggle-enabled');
+        let enabled = true;
+        toggleEnabled.addEventListener('click', () => {
+          enabled = !enabled;
+          painter.setEnabled(enabled);
+          toggleEnabled.textContent = enabled ? 'Disable painting' : 'Enable painting';
+        });
+
+        const toggleVisible = document.getElementById('toggle-visible');
+        let visible = true;
+        toggleVisible.addEventListener('click', () => {
+          visible = !visible;
+          painter.setVisible(visible);
+          toggleVisible.textContent = visible ? 'Hide mask' : 'Show mask';
+        });
+
+        document.getElementById('clear').addEventListener('click', () => painter.clear());
+
+        // A plain greyscale rendering of the raw mask at working size, so the
+        // coordinate mapping can be checked by eye against the brush strokes
+        // shown on the photo.
+        const preview = document.getElementById('preview');
+        preview.width = width;
+        preview.height = height;
+        const previewCtx = preview.getContext('2d');
+        function drawPreview() {
+          const image = previewCtx.createImageData(width, height);
+          for (let i = 0; i < painter.mask.length; i++) {
+            const v = painter.mask[i];
+            image.data[i * 4] = v;
+            image.data[i * 4 + 1] = v;
+            image.data[i * 4 + 2] = v;
+            image.data[i * 4 + 3] = 255;
+          }
+          previewCtx.putImageData(image, 0, 0);
+        }
+        drawPreview();
+
+        // Redraw the preview continuously while dragging too, not just on
+        // change, so it is easy to watch the mapping live.
+        host.addEventListener('pointermove', drawPreview);
+        host.addEventListener('pointerdown', drawPreview);
+
+        status.textContent = 'ready';
+      }
+
+      if (photo.complete) start();
+      else photo.addEventListener('load', start);
+    </script>
+  </body>
+</html>

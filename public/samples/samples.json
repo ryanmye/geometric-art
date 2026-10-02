@@ -1,0 +1,62 @@
+[
+  {
+    "file": "mona-lisa.jpg",
+    "title": "Mona Lisa",
+    "creator": "Leonardo da Vinci",
+    "year": "c. 1503-1519",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg",
+    "width": 536,
+    "height": 800
+  },
+  {
+    "file": "starry-night.jpg",
+    "title": "The Starry Night",
+    "creator": "Vincent van Gogh",
+    "year": "1889",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+    "width": 800,
+    "height": 633
+  },
+  {
+    "file": "great-wave.jpg",
+    "title": "The Great Wave off Kanagawa",
+    "creator": "Katsushika Hokusai",
+    "year": "c. 1831",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Tsunami_by_hokusai_19th_century.jpg",
+    "width": 800,
+    "height": 537
+  },
+  {
+    "file": "canyon-sunset.jpg",
+    "title": "Canyon Fins at Sunset, Grand Canyon of the Yellowstone",
+    "creator": "Jacob W. Frank / National Park Service",
+    "year": "2017",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Canyon_fins_at_sunset_(37088481505).jpg",
+    "width": 800,
+    "height": 533
+  },
+  {
+    "file": "bald-eagle.jpg",
+    "title": "An Adult Bald Eagle",
+    "creator": "U.S. Fish and Wildlife Service, Pacific Southwest Region",
+    "year": "2010",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:An_Adult_Bald_Eagle_(5657711575).jpg",
+    "width": 800,
+    "height": 535
+  },
+  {
+    "file": "blue-marble.jpg",
+    "title": "The Blue Marble",
+    "creator": "NASA (Apollo 17 crew)",
+    "year": "1972",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:The_Blue_Marble_(remastered).jpg",
+    "width": 800,
+    "height": 800
+  }
+]

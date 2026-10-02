@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Geometric Art</title>
+    <meta name="description" content="Recreate a photo out of geometric shapes: overlapping shapes, a triangle mesh or a polygon mosaic, entirely in your browser." />
+  </head>
+  <body data-state="idle">
+    <div class="app">
+      <main class="stage" id="stage">
+        <div class="frame" id="frame" hidden>
+          <canvas id="picture" aria-label="The picture made of shapes"></canvas>
+          <canvas id="original" class="original" aria-label="The original photo" hidden></canvas>
+          <canvas id="importance-view" class="overlay" aria-label="Importance map: brighter areas get more detail" hidden></canvas>
+          <span class="frame-label" id="frame-label" hidden>Original</span>
+        </div>
+
+        <div class="empty" id="empty">
+          <p class="empty-title">Turn a photo into shapes</p>
+          <p>Drop an image anywhere, paste one, or</p>
+          <div class="empty-actions">
+            <button type="button" class="primary" data-action="choose-file">Choose a photo</button>
+            <button type="button" data-action="try-sample">Try the sample</button>
+          </div>
+          <p class="hint">Your photo never leaves this browser.</p>
+        </div>
+
+        <div class="error" id="error" role="alert" hidden>
+          <span id="error-text"></span>
+          <button type="button" class="link" id="error-close" aria-label="Dismiss">Dismiss</button>
+        </div>
+      </main>
+
+      <aside class="panel">
+        <header class="panel-header">
+          <h1>Geometric Art</h1>
+          <p class="hint">Rebuilds a photo from simple geometric shapes.</p>
+        </header>
+
+        <section class="group">
+          <h2>Photo</h2>
+          <div class="row">
+            <button type="button" data-action="choose-file">Choose…</button>
+          </div>
+          <details class="samples" id="sample-menu">
+            <summary>Or pick a sample</summary>
+            <div class="sample-grid" id="sample-grid"></div>
+          </details>
+          <p class="hint" id="photo-name">No photo loaded.</p>
+        </section>
+
+        <section class="group" aria-label="Run">
+          <div class="row actions">
+            <button type="button" class="primary" id="start" disabled>Start</button>
+            <button type="button" id="pause" disabled>Pause</button>
+            <button type="button" id="reset" disabled>Reset</button>
+          </div>
+          <!-- Filled in by stats.ts with the numbers that suit the current run. -->
+          <dl class="stats" id="stats"></dl>
+          <button type="button" id="compare" class="wide" disabled>Hold to compare with original</button>
+        </section>
+
+        <section class="group" id="loop-group" aria-label="Loop" hidden>
+          <h2>Loop</h2>
+          <canvas id="loop-preview" class="loop-preview" aria-label="Preview of the finished frames" hidden></canvas>
+          <p class="hint" id="loop-hint"></p>
+          <button type="button" id="loop-play" class="wide" disabled>Play loop</button>
+          <label class="field">
+            <span class="label">Speed <output id="loop-speed-out">8 fps</output></span>
+            <input type="range" id="loop-speed" min="1" max="30" step="1" value="8" />
+          </label>
+        </section>
+
+        <form id="settings" class="group" autocomplete="off">
+          <fieldset id="settings-fields">
+            <h2>Settings</h2>
+            <p class="hint">Changes apply the next time you press Start.</p>
+
+            <div class="field">
+              <span class="label">Style</span>
+              <div class="segmented" role="radiogroup" aria-label="Style">
+                <label><input type="radio" name="style" value="shapes" checked /> <span>Overlapping shapes</span></label>
+                <label><input type="radio" name="style" value="mesh" /> <span>Triangle mesh</span></label>
+                <label><input type="radio" name="style" value="polygons" /> <span>Polygon mosaic</span></label>
+              </div>
+              <!-- Per-style help: one element each, its text set by settings.ts for the chosen style. -->
+              <p class="hint" id="style-hint"></p>
+            </div>
+
+            <div class="field">
+              <span class="label">Output</span>
+              <div class="segmented" role="radiogroup" aria-label="Output">
+                <label><input type="radio" name="mode" value="single" checked /> <span>Single picture</span></label>
+                <label><input type="radio" name="mode" value="animation" /> <span>Seed animation</span></label>
+              </div>
+            </div>
+
+            <label class="field" data-style="mesh polygons" hidden>
+              <span class="label">Number of points</span>
+              <input type="number" name="points" min="8" max="5000" step="1" value="300" required />
+              <span class="hint" id="points-hint"></span>
+            </label>
+
+            <div id="animation-settings" class="subgroup" hidden>
+              <p class="hint" id="animation-hint"></p>
+              <label class="field">
+                <span class="label">Frames</span>
+                <input type="number" name="frames" min="2" max="60" step="1" value="12" required />
+              </label>
+              <label class="field" data-style="shapes">
+                <span class="label">Shared start <output name="sharedOut">100</output></span>
+                <input type="range" name="shared" min="0" max="300" step="1" value="100" />
+              </label>
+              <label class="field" data-style="mesh polygons" hidden>
+                <span class="label">Variation <output name="variationOut">0.30</output></span>
+                <input type="range" name="variation" min="0" max="100" step="5" value="30" />
+              </label>
+            </div>
+
+            <div class="field">
+              <span class="label">Detail focus <output name="detailOut">75%</output></span>
+              <!-- The starting value is set from DEFAULT_IMPORTANCE_STRENGTH by settings.ts. -->
+              <input type="range" name="detail" min="0" max="100" step="1" value="75" />
+              <p class="hint">Spend more shapes on edges and features, fewer on flat areas. 0 treats every pixel the same.</p>
+              <div class="row detail-buttons">
+                <button type="button" id="show-importance" aria-pressed="false" disabled>Show map</button>
+                <button type="button" id="paint-detail" aria-pressed="false" disabled>Paint detail</button>
+              </div>
+              <div id="paint-tools" class="subgroup" hidden>
+                <p class="hint">Brush over the photo where you want more detail.</p>
+                <div class="segmented" role="radiogroup" aria-label="Brush">
+                  <label><input type="radio" name="brushMode" value="paint" checked /> <span>Paint</span></label>
+                  <label><input type="radio" name="brushMode" value="erase" /> <span>Erase</span></label>
+                </div>
+                <label class="field">
+                  <span class="label">Brush size</span>
+                  <input type="range" id="brush-size" min="2" max="20" step="1" value="8" />
+                </label>
+                <button type="button" id="clear-mask" class="wide" disabled>Clear painting</button>
+              </div>
+              <p class="hint" id="detail-hint"></p>
+            </div>
+
+            <div class="field" data-style="shapes">
+              <span class="label">Shapes to use</span>
+              <div class="checks">
+                <label><input type="checkbox" name="shapeType" value="triangle" checked /> Triangles</label>
+                <label><input type="checkbox" name="shapeType" value="rectangle" /> Rectangles</label>
+                <label><input type="checkbox" name="shapeType" value="rotatedRectangle" /> Rotated rectangles</label>
+                <label><input type="checkbox" name="shapeType" value="ellipse" /> Ellipses</label>
+                <label><input type="checkbox" name="shapeType" value="rotatedEllipse" /> Rotated ellipses</label>
+              </div>
+            </div>
+
+            <label class="field" data-style="shapes">
+              <span class="label">Number of shapes</span>
+              <input type="number" name="shapes" min="1" max="5000" step="1" value="300" required />
+            </label>
+
+            <label class="field" data-style="shapes">
+              <span class="label">Opacity <output name="opacityOut">50%</output></span>
+              <input type="range" name="opacity" min="1" max="255" step="1" value="128" />
+            </label>
+
+            <div class="field">
+              <span class="label">Quality</span>
+              <div class="segmented" role="radiogroup" aria-label="Quality">
+                <label><input type="radio" name="quality" value="draft" /> <span>Draft</span></label>
+                <label><input type="radio" name="quality" value="standard" checked /> <span>Standard</span></label>
+                <label><input type="radio" name="quality" value="fine" /> <span>Fine</span></label>
+              </div>
+            </div>
+
+            <label class="field">
+              <span class="label">Working size</span>
+              <select name="workingSize">
+                <option value="128">128 px (fastest)</option>
+                <option value="256" selected>256 px</option>
+                <option value="512">512 px (slowest)</option>
+              </select>
+            </label>
+
+            <div class="field">
+              <label class="label" for="seed">Seed</label>
+              <div class="row">
+                <input id="seed" type="number" name="seed" min="0" max="4294967295" step="1" value="1" required />
+                <button type="button" id="random-seed" title="Pick a random seed">Random</button>
+              </div>
+            </div>
+          </fieldset>
+        </form>
+
+
+        <section class="group">
+          <h2>Export</h2>
+          <label class="field">
+            <span class="label">PNG size (longest side)</span>
+            <select id="export-size">
+              <option value="1024">1024 px</option>
+              <option value="2048" selected>2048 px</option>
+              <option value="4096">4096 px</option>
+            </select>
+          </label>
+          <div class="row" id="single-exports">
+            <button type="button" id="export-svg" disabled>SVG</button>
+            <button type="button" id="export-png" disabled>PNG</button>
+            <button type="button" id="export-json" disabled>JSON</button>
+          </div>
+          <div id="animation-exports" hidden>
+            <div class="row">
+              <button type="button" id="export-anim-svg" disabled title="Loops by itself in a browser or an img tag">Animated SVG</button>
+              <button type="button" id="export-anim-json" disabled>JSON</button>
+            </div>
+            <button type="button" id="export-anim-zip" class="wide" disabled>PNG frames (.zip)</button>
+            <div class="row field">
+              <label>
+                <span class="label">Video size</span>
+                <select id="video-size">
+                  <option value="1024" selected>1024 px</option>
+                  <option value="2048">2048 px</option>
+                </select>
+              </label>
+              <label>
+                <span class="label">Loops</span>
+                <input type="number" id="video-loops" min="1" max="20" step="1" value="4" />
+              </label>
+            </div>
+            <button type="button" id="export-anim-video" class="wide" disabled>Record video</button>
+            <div class="row field">
+              <label>
+                <span class="label">GIF size</span>
+                <select id="gif-size">
+                  <option value="512">512 px</option>
+                  <option value="768" selected>768 px</option>
+                  <option value="1024">1024 px</option>
+                </select>
+              </label>
+              <button type="button" id="export-anim-gif" class="align-end" disabled>GIF</button>
+            </div>
+          </div>
+          <p class="hint" id="export-status" role="status" aria-live="polite"></p>
+        </section>
+      </aside>
+    </div>
+
+    <div class="drop-overlay" id="drop-overlay" hidden><span>Drop to load the photo</span></div>
+    <input type="file" id="file-input" accept="image/*" hidden />
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

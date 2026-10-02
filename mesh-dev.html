@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mesh engine check</title>
+    <style>
+      body { font: 14px system-ui, sans-serif; margin: 16px; background: #fff; color: #222; }
+      .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+      figure { margin: 0; }
+      figcaption { font-size: 12px; color: #666; }
+      #log { white-space: pre; font: 12px ui-monospace, monospace; }
+    </style>
+  </head>
+  <body>
+    <!-- Standalone page for checking the mesh engine in a browser. Not part of
+         the production build. URL options are listed at the top of
+         src/mesh/dev/meshDevPage.ts. -->
+    <div class="row">
+      <figure><canvas id="target"></canvas><figcaption>target</figcaption></figure>
+      <figure><canvas id="live"></canvas><figcaption>worker (canvas, 2x)</figcaption></figure>
+      <figure><div id="svg"></div><figcaption>final SVG (or looping animated SVG in an img), 2x</figcaption></figure>
+    </div>
+    <p>
+      <a href="?">triangles</a> · <a href="?cells=polygons">polygons</a> ·
+      <a href="?frames=8&amp;variation=0.3">triangle animation</a> ·
+      <a href="?cells=polygons&amp;frames=8&amp;variation=0.3">polygon animation</a>
+    </p>
+    <div id="log"></div>
+    <script type="module" src="/src/mesh/dev/meshDevPage.ts"></script>
+  </body>
+</html>
