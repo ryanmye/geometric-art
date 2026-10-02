@@ -21,6 +21,10 @@ npm run dev
 Opens a local dev server. Drop a photo onto the page, paste one, or pick one
 of the built-in samples, then press Start.
 
+The dev server also serves `mesh-dev.html` and `paint-dev.html`, test pages
+for the mesh engine and the paint brush used during development. They are
+not linked from the app and are not part of the published site.
+
 Run the tests:
 
 ```
@@ -373,3 +377,9 @@ The sample images, all public domain, from
 - Canyon Fins at Sunset, Grand Canyon of the Yellowstone, Jacob W. Frank / National Park Service, 2017 — [source](https://commons.wikimedia.org/wiki/File:Canyon_fins_at_sunset_(37088481505).jpg)
 - An Adult Bald Eagle, U.S. Fish and Wildlife Service, Pacific Southwest Region, 2010 — [source](https://commons.wikimedia.org/wiki/File:An_Adult_Bald_Eagle_(5657711575).jpg)
 - The Blue Marble, NASA (Apollo 17 crew), 1972 — [source](https://commons.wikimedia.org/wiki/File:The_Blue_Marble_(remastered).jpg)
+
+## Licence
+
+The code is licensed under the [MIT License](LICENSE). The sample images
+are separate, public-domain works, credited individually above; they are
+not covered by that licence.
