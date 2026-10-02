@@ -1,0 +1,44 @@
+Third-party software used by Geometric Art
+==========================================
+
+Geometric Art itself is released under the MIT License. It includes one
+third-party component under a different licence:
+
+libheif-js 1.23.2
+  Used only to decode HEIC/HEIF photos (for example from iPhones) in browsers
+  that cannot decode them themselves. Its files are downloaded by the page
+  only when such a photo is added; they are not needed for any other use of
+  the site.
+
+  libheif-js is a WebAssembly build of libheif, which in this build includes
+  the libde265 HEVC decoder. The site serves two files that contain it:
+
+  - assets/libheif-<hash>.wasm is the file libheif-wasm/libheif.wasm from
+    the libheif-js 1.23.2 package, unmodified (byte for byte the same).
+  - assets/heic.worker-<hash>.js is not a file from the package. It is this
+    site's own HEIC worker (src/decode/heic.worker.ts) combined by the
+    site's bundler (Vite) with the package's JavaScript glue code
+    (libheif-wasm/libheif.js from the same package) and minified. In it,
+    the glue's references to the Node.js modules fs, path and crypto, which
+    are used only when running under Node.js, are replaced by empty
+    stand-ins.
+
+  Source code:
+  - libheif-js:    https://github.com/catdad-experiments/libheif-js
+                   Licence: GNU Lesser General Public License v3.0 (LGPL-3.0)
+                   Full text: libheif-js-LICENSE.txt
+  - libheif:       https://github.com/strukturag/libheif
+                   Licence: LGPL-3.0 (its sample applications and wrappers,
+                   which are not used here, are MIT)
+                   Full text, with the GNU GPL v3.0 that the LGPL builds on:
+                   libheif-LICENSE.txt
+  - libde265:      https://github.com/strukturag/libde265
+                   Licence: LGPL-3.0 (its project page; the libheif-js
+                   package does not include a separate licence file for it)
+  - Geometric Art: https://github.com/ryanmye/geometric-art
+                   The worker's source (src/decode/heic.worker.ts) and the
+                   build configuration (package.json, package-lock.json,
+                   vite.config.ts) that produce assets/heic.worker-<hash>.js.
+
+  The licence files in this folder, alongside this notice, are copied
+  unchanged from the libheif-js package as installed.

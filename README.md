@@ -2,7 +2,8 @@
 
 Rebuilds a photo as overlapping translucent shapes, or as a gap-free mesh of
 flat-coloured triangles or polygons, entirely in your browser. Drop in a
-photo or pick one of the built-in samples; the picture never leaves your
+photo (including iPhone HEIC photos) or pick one of the built-in samples;
+load several photos at once and run them all. The picture never leaves your
 machine — there is no server, no upload, nothing sent anywhere.
 
 Live site: [ryanmye.github.io/geometric-art](https://ryanmye.github.io/geometric-art/)
@@ -21,9 +22,10 @@ npm run dev
 Opens a local dev server. Drop a photo onto the page, paste one, or pick one
 of the built-in samples, then press Start.
 
-The dev server also serves `mesh-dev.html` and `paint-dev.html`, test pages
-for the mesh engine and the paint brush used during development. They are
-not linked from the app and are not part of the published site.
+The dev server also serves `mesh-dev.html`, `paint-dev.html` and
+`heic-dev.html`, test pages for the mesh engine, the paint brush, and the
+HEIC decoder used during development. They are not linked from the app and
+are not part of the published site.
 
 Run the tests:
 
@@ -184,6 +186,32 @@ between JavaScript engines, and weights are converted to whole numbers so
 scoring never drifts from rounding. This has been checked in Node and
 Chrome; it has not yet been checked in Safari or Firefox.
 
+## Photos
+
+Several photos can be loaded at once — via the picker, drag-and-drop, or
+paste, each of which can bring more than one file — up to 40. A photo strip
+lets you switch between them; each keeps its own painted detail mask and its
+own latest result. "Run all" runs every loaded photo with the current
+settings, skipping any already finished with exactly those settings (a
+checkbox forces a redo of finished photos too). "Export all" bundles every
+finished photo's result into one zip, in a chosen format. Every photo is
+kept at up to 1024 px on its longest side, however large the original —
+enough for the largest working size and for "Hold to compare with original"
+— and the working image for a run is made from that copy.
+
+HEIC/HEIF photos (what iPhones produce) are recognised from their contents,
+whatever their file name or reported type says. Safari decodes them
+natively; other browsers download [libheif-js](https://github.com/catdad-experiments/libheif-js)
+(libheif and the libde265 HEVC decoder, compiled to WebAssembly) the first
+time a HEIC is added — the project's one runtime dependency, served from
+the site itself and run in a worker so the page does not freeze. The
+photo's stored rotation is applied automatically. This has been tried with
+ordinary HEIC files and one with a rotation box, but not with burst or
+live-photo files, mirrored images, or 10-bit wide-colour photos; an
+orientation that lives only in EXIF (rather than the file's own rotation
+box) is not corrected; and decoding needs memory for the photo's full pixel
+buffer, on the order of 190 MB for a 48-megapixel photo.
+
 ## Settings
 
 - **Style** — overlapping shapes, triangle mesh, or polygon mosaic.
@@ -218,6 +246,9 @@ Chrome; it has not yet been checked in Safari or Firefox.
   to before the search runs. Larger is slower.
 - **Seed** — the random seed. The same photo, settings, and seed always
   produce the same result, regardless of machine or number of workers.
+- **Run all** — with more than one photo loaded, runs every photo with the
+  settings above, skipping ones already finished with exactly these
+  settings (see "Photos").
 
 ## Exports
 
@@ -243,6 +274,19 @@ For a seed animation:
   (MP4 where supported, otherwise WebM), at a chosen size and number of
   loops.
 - **GIF** — an animated GIF at a chosen size.
+
+With more than one photo loaded, **Export all (.zip)** bundles every
+finished photo's result into one zip, in a chosen format: SVG (animated SVG
+for an animation), PNG (GIF for an animation), or JSON.
+
+Where the browser can share files (Safari and Chrome on phones, and some
+desktop browsers), **Share … or save to Photos** buttons sit beside the PNG,
+GIF and video downloads and Export all. They open the system share sheet,
+where an iPhone offers Save Image / Save Video into Photos. Making a GIF or
+video takes longer than the browser lets a tap count, so the button then
+turns into "Tap to share" for a second tap. Share all sends the finished
+pictures as PNGs (GIFs for animations), at most 10 files and 50 MB at once;
+beyond that it saves the zip instead. SVG, JSON and zips stay download-only.
 
 ### JSON formats
 
@@ -337,6 +381,10 @@ and every finished frame as a complete `MeshResult`:
   preview).
 - `src/paint` — the "paint detail here" brush: a plain mask and the
   pointer-driven painter built on it.
+- `src/decode` — HEIC/HEIF detection and decoding (native where the browser
+  supports it, otherwise libheif-js in a worker).
+- `src/ui/photos` — the photo list, the "Run all" batch plan, and the
+  "Export all" zip.
 - `src/worker` — runs shape searches in parallel, either in a pool of web
   workers (in the browser) or inline on one thread (in tests and the CLI
   script).
@@ -378,8 +426,27 @@ The sample images, all public domain, from
 - An Adult Bald Eagle, U.S. Fish and Wildlife Service, Pacific Southwest Region, 2010 — [source](https://commons.wikimedia.org/wiki/File:An_Adult_Bald_Eagle_(5657711575).jpg)
 - The Blue Marble, NASA (Apollo 17 crew), 1972 — [source](https://commons.wikimedia.org/wiki/File:The_Blue_Marble_(remastered).jpg)
 
+HEIC/HEIF decoding uses [libheif-js](https://github.com/catdad-experiments/libheif-js),
+a WebAssembly build of [libheif](https://github.com/strukturag/libheif)
+(which in this build includes the [libde265](https://github.com/strukturag/libde265)
+HEVC decoder); see Licence below.
+
 ## Licence
 
-The code is licensed under the [MIT License](LICENSE). The sample images
-are separate, public-domain works, credited individually above; they are
-not covered by that licence.
+The project's own code is licensed under the [MIT License](LICENSE).
+
+The HEIC decoder is a separate third-party component, under a different
+licence: libheif-js, which packages libheif (including the libde265 HEVC
+decoder), is LGPL-3.0. It is kept out of the main page script and fetched
+at run time only when needed, as two files: the package's `.wasm` file,
+unmodified, and a worker script in which Vite has bundled the package's
+JavaScript glue together with this project's own worker code
+(`src/decode/heic.worker.ts`). `licenses/NOTICE.txt` describes both; it and
+the licence texts are served with the site under `licenses/`
+(`public/licenses/` in this repository). Source: [libheif-js](https://github.com/catdad-experiments/libheif-js),
+[libheif](https://github.com/strukturag/libheif),
+[libde265](https://github.com/strukturag/libde265). This is a factual
+description, not legal advice, and not a claim of licence compliance.
+
+The sample images are separate, public-domain works, credited individually
+above; they are not covered by either licence.

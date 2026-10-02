@@ -13,6 +13,7 @@ import {
 } from '../../mesh';
 import { errorStat, timeStat, type StatRow } from '../stats';
 import type { ActiveRun, RunContext, Style } from './activeRun';
+import type { PictureExports } from '../exports/types';
 
 /**
  * Mesh runner options from the page's run options: the importance weights
@@ -37,6 +38,18 @@ export function cellStat(result: MeshResult): StatRow {
 export function meshBaseName(config: MeshConfig): string {
   const kind = config.cells === 'polygons' ? 'polygons' : 'mesh';
   return `geometric-art-${kind}-seed-${config.seed}-points-${config.points}`;
+}
+
+/** What the single-picture export buttons save for a mesh result. */
+export function meshPictureExports(result: MeshResult): PictureExports {
+  return {
+    baseName: meshBaseName(result.config),
+    width: result.width,
+    height: result.height,
+    draw: (ctx, scale) => drawMesh(ctx, result, scale),
+    svg: () => meshToSVG(result),
+    json: () => JSON.stringify(result, null, 2),
+  };
 }
 
 export function createMeshPicture(
@@ -97,17 +110,7 @@ export function createMeshPicture(
         timeStat(elapsedMs),
       ];
     },
-    pictureExports() {
-      const result: MeshResult = runner.result();
-      return {
-        baseName: meshBaseName(result.config),
-        width: result.width,
-        height: result.height,
-        draw: (ctx, scale) => drawMesh(ctx, result, scale),
-        svg: () => meshToSVG(result),
-        json: () => JSON.stringify(result, null, 2),
-      };
-    },
+    pictureExports: () => meshPictureExports(runner.result()),
     animationExports: () => null,
     snapshot: () => runner.result(),
   };

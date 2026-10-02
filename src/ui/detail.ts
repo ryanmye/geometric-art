@@ -23,6 +23,10 @@ export interface Detail {
   weightsFor(target: Bitmap): { weights: Float32Array; importance: ImportanceInfo } | null;
   /** The painted mask (for checking from scripts), or null. */
   mask(): Uint8Array | null;
+  /** Put back a saved painting (same size as the working image), e.g. when switching photos. */
+  setMask(mask: Uint8Array): void;
+  /** Whether anything is painted. */
+  painted(): boolean;
 }
 
 export function setUpDetail(elements: {
@@ -104,17 +108,23 @@ export function setUpDetail(elements: {
   }
 
   strength.addEventListener('input', update);
+  // The buttons are disabled while a run is in progress; also ignore clicks
+  // made by a script then (the painting must not change under a run).
   mapButton.addEventListener('click', () => {
+    if (!available) return;
     showingMap = !showingMap;
     update();
   });
   paintButton.addEventListener('click', () => {
+    if (!available) return;
     setPainting(!painting);
     update();
   });
   for (const radio of eraseRadios) radio.addEventListener('change', () => painter?.setErasing(erasing()));
   brushSize.addEventListener('input', () => painter?.setBrushSize(Number(brushSize.value) / 100));
-  clearButton.addEventListener('click', () => painter?.clear());
+  clearButton.addEventListener('click', () => {
+    if (available) painter?.clear();
+  });
 
   const detail: Detail = {
     setImage(image) {
@@ -152,6 +162,11 @@ export function setUpDetail(elements: {
       return { weights: currentWeights(image), importance: { strength: strengthNow, painted: isPainted } };
     },
     mask: () => (painter ? painter.mask : null),
+    setMask(mask) {
+      if (painter && painter.mask.length === mask.length) painter.setMask(mask);
+      update();
+    },
+    painted: () => painted(),
   };
   update();
   return detail;

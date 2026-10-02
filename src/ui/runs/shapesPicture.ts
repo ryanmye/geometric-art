@@ -1,14 +1,27 @@
 // Style "overlapping shapes", output "single picture": one runner, each new
 // shape drawn as it arrives.
 
-import type { RunConfig } from '../../engine/types';
+import type { RunConfig, RunResult } from '../../engine/types';
 import { createRunner } from '../../engine/runner';
 import { drawResult } from '../../render/drawResult';
 import { drawShape } from '../../render/drawShape';
 import { toSVG } from '../../render/toSVG';
 import { toJSON } from '../../render/toJSON';
 import { errorStat, timeStat } from '../stats';
+import type { PictureExports } from '../exports/types';
 import type { ActiveRun, RunContext } from './activeRun';
+
+/** What the single-picture export buttons save for a shapes result. */
+export function shapesPictureExports(result: RunResult): PictureExports {
+  return {
+    baseName: `geometric-art-seed-${result.config.seed}`,
+    width: result.width,
+    height: result.height,
+    draw: (ctx, scale) => drawResult(ctx, result, scale),
+    svg: () => toSVG(result),
+    json: () => toJSON(result),
+  };
+}
 
 export function createShapesPicture(context: RunContext, config: RunConfig): ActiveRun {
   const { stage, photo, target } = context;
@@ -60,15 +73,7 @@ export function createShapesPicture(context: RunContext, config: RunConfig): Act
     },
     pictureExports() {
       const result = runner.result();
-      if (result.shapes.length === 0) return null;
-      return {
-        baseName: `geometric-art-seed-${result.config.seed}`,
-        width: result.width,
-        height: result.height,
-        draw: (ctx, scale) => drawResult(ctx, result, scale),
-        svg: () => toSVG(result),
-        json: () => toJSON(result),
-      };
+      return result.shapes.length === 0 ? null : shapesPictureExports(result);
     },
     animationExports: () => null,
     snapshot: () => runner.result(),

@@ -14,7 +14,7 @@ import {
 } from '../../mesh';
 import type { LoopControls } from '../loopControls';
 import { errorStat, timeStat } from '../stats';
-import type { FrameSource } from '../exports/types';
+import type { AnimationExports, FrameSource } from '../exports/types';
 import type { ActiveRun, RunContext, Style } from './activeRun';
 import { createLoopView } from './loopView';
 import { meshBaseName, meshOptions } from './meshPicture';
@@ -35,6 +35,16 @@ export function meshFrames(frames: MeshResult[]): FrameSource {
  */
 export function meshAnimationName(animation: MeshAnimationResult): string {
   return `${meshBaseName(animation.config)}-frames-${animation.frames.length}-variation-${animation.variation}`;
+}
+
+/** What the animation export buttons save for a mesh animation. */
+export function meshAnimationExports(animation: MeshAnimationResult): AnimationExports {
+  return {
+    baseName: meshAnimationName(animation),
+    frames: meshFrames(animation.frames),
+    animatedSVG: (fps) => meshToAnimatedSVG(animation, fps),
+    json: (fps) => JSON.stringify({ ...animation, fps }, null, 2),
+  };
 }
 
 export function createMeshAnimation(
@@ -125,16 +135,7 @@ export function createMeshAnimation(
       ];
     },
     pictureExports: () => null,
-    animationExports() {
-      if (finished.length < 2) return null;
-      const animation = runner.result();
-      return {
-        baseName: meshAnimationName(animation),
-        frames: meshFrames(animation.frames),
-        animatedSVG: (fps) => meshToAnimatedSVG(animation, fps),
-        json: (fps) => JSON.stringify({ ...animation, fps }, null, 2),
-      };
-    },
+    animationExports: () => (finished.length < 2 ? null : meshAnimationExports(runner.result())),
     snapshot: () => runner.result(),
   };
 }

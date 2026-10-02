@@ -9,7 +9,7 @@ import { toAnimatedSVG } from '../../render/toAnimatedSVG';
 import { animationToJSON } from '../../render/toJSON';
 import type { LoopControls } from '../loopControls';
 import { errorStat, timeStat } from '../stats';
-import type { FrameSource } from '../exports/types';
+import type { AnimationExports, FrameSource } from '../exports/types';
 import type { ActiveRun, RunContext } from './activeRun';
 import { createLoopView } from './loopView';
 
@@ -26,6 +26,16 @@ export function shapeFrames(frames: RunResult[]): FrameSource {
 /** e.g. geometric-art-seed-1-frames-12-shared-100 (frames = finished frames). */
 export function shapesAnimationName(animation: AnimationResult): string {
   return `geometric-art-seed-${animation.config.seed}-frames-${animation.frames.length}-shared-${animation.shared}`;
+}
+
+/** What the animation export buttons save for a shapes animation. */
+export function shapesAnimationExports(animation: AnimationResult): AnimationExports {
+  return {
+    baseName: shapesAnimationName(animation),
+    frames: shapeFrames(animation.frames),
+    animatedSVG: (fps) => toAnimatedSVG(animation, fps),
+    json: (fps) => animationToJSON(animation, fps),
+  };
 }
 
 export function createShapesAnimation(
@@ -118,16 +128,7 @@ export function createShapesAnimation(
       ];
     },
     pictureExports: () => null,
-    animationExports() {
-      if (finished.length < 2) return null;
-      const animation = runner.result();
-      return {
-        baseName: shapesAnimationName(animation),
-        frames: shapeFrames(animation.frames),
-        animatedSVG: (fps) => toAnimatedSVG(animation, fps),
-        json: (fps) => animationToJSON(animation, fps),
-      };
-    },
+    animationExports: () => (finished.length < 2 ? null : shapesAnimationExports(runner.result())),
     snapshot: () => runner.result(),
   };
 }

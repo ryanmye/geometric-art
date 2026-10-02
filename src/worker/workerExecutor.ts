@@ -16,6 +16,7 @@ import type { Bitmap, RunConfig, ShapeRecord } from '../engine/types';
 import { pickBest, type SearchOutcome } from '../engine/searcher';
 import type { Executor } from './executor';
 import type { FromWorker, ToWorker } from './messages';
+import { workerError } from './workerFailure';
 
 interface PendingSearch {
   id: number;
@@ -74,7 +75,9 @@ export function createWorkerExecutor(
 
   for (let i = 0; i < count; i++) {
     const worker = new Worker(new URL('./search.worker.ts', import.meta.url), { type: 'module' });
+    let heardFrom = false;
     worker.onmessage = (event: MessageEvent<FromWorker>) => {
+      heardFrom = true;
       const message = event.data;
       if (message.type === 'error') {
         fail(new Error(`Search worker failed: ${message.message}`));
@@ -92,7 +95,7 @@ export function createWorkerExecutor(
     };
     worker.onerror = (event) => {
       event.preventDefault();
-      fail(new Error(`Search worker failed to run: ${event.message || 'unknown error'}`));
+      fail(workerError('Search worker', event, heardFrom));
     };
     worker.onmessageerror = () => fail(new Error('Search worker sent a message that could not be read'));
     // postMessage copies the pixels, so each worker has its own target.

@@ -4,6 +4,7 @@
 import type { Bitmap } from '../../engine/types';
 import type { GifOptions } from '../../export/gif';
 import { createZip, type ZipEntry } from '../../render/zip';
+import { workerError } from '../../worker/workerFailure';
 import { canvasToPNG, drawToCanvas, outputSize } from './canvas';
 import { recordVideo, videoExtension } from './recordVideo';
 import type { AnimationExports } from './types';
@@ -97,7 +98,8 @@ function encodeInWorker(frames: Bitmap[], options: GifOptions): Promise<Uint8Arr
     worker.onerror = (event) => {
       event.preventDefault();
       finish();
-      reject(new Error(`GIF encoder failed to run: ${event.message || 'unknown error'}`));
+      // The worker answers only once, when it is done, so it has not been heard from here.
+      reject(workerError('GIF encoder', event, false));
     };
     const request: GifRequest = { frames, options };
     // Hand the pixel buffers over instead of copying them.

@@ -13,6 +13,9 @@ export interface ZipEntry {
   data: Uint8Array;
 }
 
+/** Unix permissions stored with each file (a regular file, readable by all, writable by its owner). */
+const UNIX_FILE_MODE = 0o100644;
+
 /** CRC-32 (the checksum zip uses), via the usual 256-entry lookup table. */
 const CRC_TABLE = makeCrcTable();
 
@@ -33,10 +36,13 @@ export function crc32(data: Uint8Array): number {
 }
 
 /**
- * Build a zip archive. `date` is stored as every file's modification time
- * (zip keeps local time to 2-second precision).
+ * Build a zip archive as a list of parts: small header pieces and each file's
+ * own bytes (not copied). Joined in order they are the zip file. Handing the
+ * parts straight to `new Blob(parts)` avoids building one huge array for a
+ * large zip. `date` is stored as every file's modification time (zip keeps
+ * local time to 2-second precision).
  */
-export function createZip(entries: ZipEntry[], date = new Date()): Uint8Array {
+export function createZipParts(entries: ZipEntry[], date = new Date()): Uint8Array[] {
   const encoder = new TextEncoder();
   const time = (date.getHours() << 11) | (date.getMinutes() << 5) | (date.getSeconds() >> 1);
   const day = ((Math.max(1980, date.getFullYear()) - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
@@ -47,66 +53,103 @@ export function createZip(entries: ZipEntry[], date = new Date()): Uint8Array {
   entries.forEach((entry, i) => (size += 30 + names[i].length + entry.data.length + 46 + names[i].length));
   if (size > 0xffffffff || entries.length > 0xffff) throw new Error('Too much data for a simple zip file');
 
-  const out = new Uint8Array(size);
-  const view = new DataView(out.buffer);
-  let pos = 0;
-  const u16 = (value: number) => {
-    view.setUint16(pos, value, true);
-    pos += 2;
-  };
-  const u32 = (value: number) => {
-    view.setUint32(pos, value, true);
-    pos += 4;
-  };
-  const bytes = (value: Uint8Array) => {
-    out.set(value, pos);
-    pos += value.length;
-  };
+  const parts: Uint8Array[] = [];
+  let offset = 0; // bytes written so far, across all parts
+
+  /** A small writer for one header piece of the given length. */
+  function piece(length: number) {
+    const bytes = new Uint8Array(length);
+    const view = new DataView(bytes.buffer);
+    let pos = 0;
+    return {
+      u16(value: number) {
+        view.setUint16(pos, value, true);
+        pos += 2;
+      },
+      u32(value: number) {
+        view.setUint32(pos, value, true);
+        pos += 4;
+      },
+      bytes(value: Uint8Array) {
+        bytes.set(value, pos);
+        pos += value.length;
+      },
+      finish() {
+        parts.push(bytes);
+        offset += bytes.length;
+      },
+    };
+  }
 
   // Shared start of both header kinds: version needed, flags, method, time, date, crc, sizes.
-  const commonFields = (i: number) => {
-    u16(10); // version needed to extract: 1.0
-    u16(0x0800); // flags: bit 11 = file name is UTF-8
-    u16(0); // compression method: 0 = stored
-    u16(time);
-    u16(day);
-    u32(crcs[i]);
-    u32(entries[i].data.length); // compressed size
-    u32(entries[i].data.length); // uncompressed size
-    u16(names[i].length);
-    u16(0); // extra field length
+  const commonFields = (w: ReturnType<typeof piece>, i: number) => {
+    w.u16(10); // version needed to extract: 1.0
+    w.u16(0x0800); // flags: bit 11 = file name is UTF-8
+    w.u16(0); // compression method: 0 = stored
+    w.u16(time);
+    w.u16(day);
+    w.u32(crcs[i]);
+    w.u32(entries[i].data.length); // compressed size
+    w.u32(entries[i].data.length); // uncompressed size
+    w.u16(names[i].length);
+    w.u16(0); // extra field length
   };
 
   const offsets: number[] = [];
   entries.forEach((entry, i) => {
-    offsets.push(pos);
-    u32(0x04034b50); // local file header signature
-    commonFields(i);
-    bytes(names[i]);
-    bytes(entry.data);
+    offsets.push(offset);
+    const local = piece(30 + names[i].length);
+    local.u32(0x04034b50); // local file header signature
+    commonFields(local, i);
+    local.bytes(names[i]);
+    local.finish();
+    parts.push(entry.data); // the file itself, as it is
+    offset += entry.data.length;
   });
 
-  const directoryStart = pos;
+  const directoryStart = offset;
   entries.forEach((_entry, i) => {
-    u32(0x02014b50); // central directory header signature
-    u16(20); // version made by
-    commonFields(i);
-    u16(0); // comment length
-    u16(0); // disk number
-    u16(0); // internal attributes
-    u32(0); // external attributes
-    u32(offsets[i]); // where the local header is
-    bytes(names[i]);
+    const central = piece(46 + names[i].length);
+    central.u32(0x02014b50); // central directory header signature
+    // Made by: Unix (3), zip 2.0. With a Unix origin, unzip tools that do not
+    // read the UTF-8 flag (such as the one in macOS) take the name's bytes as
+    // they are instead of converting them from an old DOS code page, so
+    // non-Latin names come out right everywhere.
+    central.u16((3 << 8) | 20);
+    commonFields(central, i);
+    central.u16(0); // comment length
+    central.u16(0); // disk number
+    central.u16(0); // internal attributes
+    central.u32(UNIX_FILE_MODE * 0x10000); // external attributes: an ordinary file, rw-r--r--
+    central.u32(offsets[i]); // where the local header is
+    central.bytes(names[i]);
+    central.finish();
   });
-  const directorySize = pos - directoryStart;
+  const directorySize = offset - directoryStart;
 
-  u32(0x06054b50); // end of central directory signature
-  u16(0); // this disk
-  u16(0); // disk where the directory starts
-  u16(entries.length); // entries on this disk
-  u16(entries.length); // entries in total
-  u32(directorySize);
-  u32(directoryStart);
-  u16(0); // comment length
+  const end = piece(22);
+  end.u32(0x06054b50); // end of central directory signature
+  end.u16(0); // this disk
+  end.u16(0); // disk where the directory starts
+  end.u16(entries.length); // entries on this disk
+  end.u16(entries.length); // entries in total
+  end.u32(directorySize);
+  end.u32(directoryStart);
+  end.u16(0); // comment length
+  end.finish();
+  return parts;
+}
+
+/** Build a zip archive in one array (the parts from createZipParts, joined). */
+export function createZip(entries: ZipEntry[], date = new Date()): Uint8Array {
+  const parts = createZipParts(entries, date);
+  let size = 0;
+  for (const part of parts) size += part.length;
+  const out = new Uint8Array(size);
+  let pos = 0;
+  for (const part of parts) {
+    out.set(part, pos);
+    pos += part.length;
+  }
   return out;
 }

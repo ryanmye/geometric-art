@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>Geometric Art</title>
+    <!-- Inline, so the site makes no request for a favicon. -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232f5bd3'/%3E%3Cpath d='M4 26 14 6l10 20z' fill='%23f0b429' fill-opacity='.9'/%3E%3Cpath d='M12 26 22 12l7 14z' fill='%23fff' fill-opacity='.75'/%3E%3C/svg%3E"
+    />
     <meta name="description" content="Recreate a photo out of geometric shapes: overlapping shapes, a triangle mesh or a polygon mosaic, entirely in your browser." />
   </head>
   <body data-state="idle">
@@ -19,12 +24,15 @@
 
         <div class="empty" id="empty">
           <p class="empty-title">Turn a photo into shapes</p>
-          <p>Drop an image anywhere, paste one, or</p>
+          <p>Drop photos anywhere, paste them, or</p>
           <div class="empty-actions">
-            <button type="button" class="primary" data-action="choose-file">Choose a photo</button>
+            <button type="button" class="primary" data-action="choose-file">Choose photos</button>
             <button type="button" data-action="try-sample">Try the sample</button>
           </div>
-          <p class="hint">Your photo never leaves this browser.</p>
+          <p class="hint">
+            You can add up to 40 photos at once: Run all makes each in turn, and Export all saves them in one zip.
+          </p>
+          <p class="hint">Your photos never leave this browser.</p>
         </div>
 
         <div class="error" id="error" role="alert" hidden>
@@ -49,6 +57,23 @@
             <div class="sample-grid" id="sample-grid"></div>
           </details>
           <p class="hint" id="photo-name">No photo loaded.</p>
+          <!-- Shown once a photo is loaded; the count, Clear all and the strip only with several. -->
+          <div class="photo-strip-group" id="photo-strip-group" hidden>
+            <div class="photo-strip-head">
+              <span class="hint" id="photo-count"></span>
+              <button type="button" class="link" id="remove-photo">Remove</button>
+              <button type="button" class="link clear-all" id="clear-photos">Clear all…</button>
+            </div>
+            <p class="clear-confirm" id="clear-confirm" hidden>
+              <span id="clear-question"></span>
+              <span class="row">
+                <button type="button" id="clear-yes" class="danger">Yes, clear all</button>
+                <button type="button" id="clear-cancel">Cancel</button>
+              </span>
+            </p>
+            <div class="photo-strip" id="photo-strip" role="listbox" aria-orientation="horizontal" aria-label="Loaded photos"></div>
+          </div>
+          <p class="hint" id="photo-message" role="status" hidden></p>
         </section>
 
         <section class="group" aria-label="Run">
@@ -57,10 +82,20 @@
             <button type="button" id="pause" disabled>Pause</button>
             <button type="button" id="reset" disabled>Reset</button>
           </div>
+
           <!-- Filled in by stats.ts with the numbers that suit the current run. -->
           <dl class="stats" id="stats"></dl>
           <p class="hint" id="run-note" role="status" hidden></p>
           <button type="button" id="compare" class="wide" disabled>Hold to compare with original</button>
+          <!-- Shown when more than one photo is loaded. -->
+          <div id="batch-controls" class="batch" hidden>
+            <button type="button" id="run-all" class="wide">Run all photos</button>
+            <label class="check"><input type="checkbox" id="redo-finished" /> Also redo finished photos</label>
+            <p class="hint">
+              Runs every photo in turn with the current settings, skipping photos already finished with exactly these
+              settings and painting.
+            </p>
+          </div>
         </section>
 
         <section class="group" id="loop-group" aria-label="Loop" hidden>
@@ -204,10 +239,14 @@
               <option value="4096">4096 px</option>
             </select>
           </label>
-          <div class="row" id="single-exports">
-            <button type="button" id="export-svg" disabled>SVG</button>
-            <button type="button" id="export-png" disabled>PNG</button>
-            <button type="button" id="export-json" disabled>JSON</button>
+          <div id="single-exports">
+            <div class="row">
+              <button type="button" id="export-svg" disabled>SVG</button>
+              <button type="button" id="export-png" disabled>PNG</button>
+              <button type="button" id="export-json" disabled>JSON</button>
+            </div>
+            <!-- The share buttons show only where the browser can share files (see shareButton.ts). -->
+            <button type="button" id="export-share-png" class="wide" hidden disabled>Share PNG</button>
           </div>
           <div id="animation-exports" hidden>
             <div class="row">
@@ -229,6 +268,7 @@
               </label>
             </div>
             <button type="button" id="export-anim-video" class="wide" disabled>Record video</button>
+            <button type="button" id="export-share-video" class="wide" hidden disabled>Share video</button>
             <div class="row field">
               <label>
                 <span class="label">GIF size</span>
@@ -240,14 +280,37 @@
               </label>
               <button type="button" id="export-anim-gif" class="align-end" disabled>GIF</button>
             </div>
+            <button type="button" id="export-share-gif" class="wide" hidden disabled>Share GIF</button>
+          </div>
+          <!-- Shown when more than one photo is loaded. -->
+          <div id="export-all" class="field" hidden>
+            <span class="label">All finished photos</span>
+            <select id="export-all-format" aria-label="Format for all photos">
+              <option value="vector">SVG, or animated SVG</option>
+              <option value="image">PNG, or GIF for animations</option>
+              <option value="json">JSON</option>
+            </select>
+            <button type="button" id="export-all-button" class="wide">Export all as one .zip</button>
+            <button type="button" id="export-all-share" class="wide" hidden disabled>Share all</button>
+            <p class="hint" id="export-all-hint"></p>
           </div>
           <p class="hint" id="export-status" role="status" aria-live="polite"></p>
         </section>
+        <footer class="third-party">
+          <p class="hint">
+            Third-party: HEIC photos are decoded with
+            <a href="https://github.com/catdad-experiments/libheif-js" target="_blank" rel="noopener noreferrer">libheif-js</a>
+            (a build of <a href="https://github.com/strukturag/libheif" target="_blank" rel="noopener noreferrer">libheif</a>),
+            licensed LGPL-3.0, used only for HEIC photos and downloaded only when you add one.
+            <a href="licenses/NOTICE.txt" target="_blank" rel="noopener noreferrer">Notice and licence texts</a>.
+          </p>
+        </footer>
       </aside>
     </div>
 
-    <div class="drop-overlay" id="drop-overlay" hidden><span>Drop to load the photo</span></div>
-    <input type="file" id="file-input" accept="image/*" hidden />
+    <div class="drop-overlay" id="drop-overlay" hidden><span>Drop to add photos</span></div>
+    <!-- .heic/.heif listed too: some browsers give HEIC photos no image type. -->
+    <input type="file" id="file-input" accept="image/*,.heic,.heif" multiple hidden />
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

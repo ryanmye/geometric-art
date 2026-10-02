@@ -464,6 +464,172 @@ button.align-end {
   margin-top: 8px;
 }
 
+.photo-strip-group {
+  margin-top: 10px;
+}
+
+.photo-strip-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.photo-strip-head .hint {
+  flex: 1;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* With one photo only "Remove photo" shows, at the right. */
+.photo-strip-head #remove-photo {
+  margin-left: auto;
+}
+
+/* Kept well apart from Remove, and it asks first. */
+.photo-strip-head .clear-all {
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+}
+
+.clear-confirm {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.clear-confirm .row {
+  margin-top: 6px;
+}
+
+button.danger {
+  background: var(--danger-text);
+  border-color: var(--danger-text);
+  color: var(--panel);
+}
+
+button.danger:hover:not(:disabled) {
+  background: var(--danger-text);
+  filter: brightness(1.1);
+}
+
+/* One scrolling row, so dozens of photos never push the picture away.
+   Padding leaves room for the focus ring. */
+.photo-strip {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 5px 5px 8px;
+  overflow-x: auto;
+}
+
+.photo-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--button);
+}
+
+.photo-thumb canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.photo-thumb[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Selected (the current photo): a thick ring inside the thumbnail. */
+.photo-thumb[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--accent);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Keyboard focus: a separate ring outside, in the text colour. */
+.photo-thumb:focus {
+  outline: none;
+}
+
+.photo-thumb:focus-visible {
+  outline: 2px dashed var(--text);
+  outline-offset: 2px;
+}
+
+/* The result mark: none (no mark), in progress (hollow ring), finished
+   (round, with a tick) and failed (square, with "!"), so the shape tells
+   them apart as well as the colour. */
+.photo-mark {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: none;
+  width: 14px;
+  height: 14px;
+  font: 700 10px/14px system-ui, sans-serif;
+  text-align: center;
+  color: #fff;
+  box-shadow: 0 0 0 1.5px #fff;
+}
+
+.photo-thumb[data-status='running'] .photo-mark {
+  display: block;
+  border-radius: 50%;
+  border: 3px solid #f0b429;
+  background: rgb(0 0 0 / 35%);
+}
+
+.photo-thumb[data-status='done'] .photo-mark {
+  display: block;
+  border-radius: 50%;
+  background: #2f9e44;
+}
+
+.photo-thumb[data-status='done'] .photo-mark::before {
+  content: '✓';
+}
+
+.photo-thumb[data-status='failed'] .photo-mark {
+  display: block;
+  border-radius: 2px;
+  background: #e03131;
+}
+
+.photo-thumb[data-status='failed'] .photo-mark::before {
+  content: '!';
+}
+
+.batch {
+  margin-top: 12px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.third-party {
+  padding: 12px 0 4px;
+  border-top: 1px solid var(--line);
+}
+
+.third-party a {
+  color: inherit;
+}
+
 /* ---- Narrow screens: picture on top, controls below ---- */
 
 @media (max-width: 760px) {

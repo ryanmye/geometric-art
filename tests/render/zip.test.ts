@@ -71,3 +71,19 @@ describe('createZip', () => {
     expect(new Uint8Array(extracted)).toEqual(entries[1].data);
   });
 });
+
+describe('createZipParts', () => {
+  it('joined in order, the parts are exactly createZip, and file bytes are not copied', async () => {
+    const { createZipParts } = await import('../../src/render/zip');
+    const date = new Date(2026, 9, 1, 12, 30, 44);
+    const parts = createZipParts(entries, date);
+    const joined = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+    let pos = 0;
+    for (const part of parts) {
+      joined.set(part, pos);
+      pos += part.length;
+    }
+    expect(joined).toEqual(createZip(entries, date));
+    expect(parts).toContain(entries[1].data);
+  });
+});
