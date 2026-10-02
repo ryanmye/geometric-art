@@ -5,6 +5,7 @@ import { DEFAULT_MESH_CONFIG } from '../../src/mesh/config';
 import { createMeshRunner } from '../../src/mesh/runner';
 import type { MeshConfig, MeshResult, MeshRunnerOptions } from '../../src/mesh/types';
 import { meshWeights } from '../../src/mesh/weights';
+import { LONG_TEST_TIMEOUT } from '../timing';
 import { loadFixture, smallConfig } from './helpers';
 
 const target = loadFixture();
@@ -17,7 +18,7 @@ function run(config: MeshConfig, options: MeshRunnerOptions = {}): Promise<MeshR
 }
 
 describe('weights', () => {
-  it('without weights the output is byte-identical to before weights existed', async () => {
+  it('without weights the output is byte-identical to before weights existed', { timeout: LONG_TEST_TIMEOUT }, async () => {
     // SHA-256 of the JSON export for the default config (seed 1, 300 points,
     // standard), recorded before the weights option was added.
     const result = await run(DEFAULT_MESH_CONFIG);

@@ -7,6 +7,7 @@ import { createMeshRunner } from '../../src/mesh/runner';
 import { createMeshState } from '../../src/mesh/state';
 import { meshToSVG } from '../../src/mesh/toSVG';
 import type { MeshResult } from '../../src/mesh/types';
+import { eventLoopTurns, LONG_TEST_TIMEOUT } from '../timing';
 import { checkTriangulation } from './checkTriangulation';
 import { loadFixture, runToEnd, smallConfig } from './helpers';
 
@@ -98,29 +99,34 @@ describe('runner', () => {
     for (const report of progress) expect(report.result.generation).toBe(report.generation);
   });
 
-  it('pause stops it, and resuming finishes with the same mesh as an uninterrupted run', async () => {
+  it('pause stops it, and resuming finishes with the same mesh as an uninterrupted run', { timeout: LONG_TEST_TIMEOUT }, async () => {
     const config = smallConfig({ points: 200, generations: 300 });
     const uninterrupted = await runToEnd(target, config);
 
     let done: MeshResult | null = null;
     let doneCount = 0;
+    let reportDone = () => {};
+    const finished = new Promise<void>((resolve) => (reportDone = resolve));
     const runner = createMeshRunner(
       target,
       config,
-      { onDone: (result) => { done = result; doneCount++; } },
+      { onDone: (result) => { done = result; doneCount++; reportDone(); } },
       { executor: 'inline', progressInterval: 0 },
     );
     expect(runner.state).toBe('idle');
     runner.start();
     expect(runner.state).toBe('running');
+    // start() runs a first 25 ms slice of generations before it returns, and
+    // the loop lets timers in between slices, so this pause lands after at
+    // most a few slices: well inside the 300 generations, however slow the machine.
     await wait(15);
     runner.pause();
     expect(runner.state).toBe('paused');
-    await wait(60);
+    await eventLoopTurns();
     const pausedAt = runner.result().generation;
     expect(pausedAt).toBeGreaterThan(0);
     expect(pausedAt).toBeLessThan(config.generations);
-    await wait(60);
+    await eventLoopTurns();
     expect(runner.result().generation).toBe(pausedAt); // really stopped
     expect(doneCount).toBe(0);
 
@@ -135,7 +141,8 @@ describe('runner', () => {
       await wait(30);
     }
     runner.start();
-    while (runner.state !== 'done') await wait(10);
+    await finished;
+    expect(runner.state).toBe('done');
     expect(doneCount).toBe(1);
     expect(JSON.stringify(done)).toBe(JSON.stringify(uninterrupted.result));
     runner.start(); // no effect once done
@@ -151,7 +158,7 @@ describe('runner', () => {
     await wait(20);
     runner.dispose();
     const at = runner.result().generation;
-    await wait(60);
+    await eventLoopTurns();
     expect(runner.result().generation).toBe(at);
     expect(doneCount).toBe(0);
   });

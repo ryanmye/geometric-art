@@ -6,6 +6,7 @@ import { meshToAnimatedSVG } from '../../src/mesh/toAnimatedSVG';
 import type { MeshAnimationResult, MeshAnimationSettings, MeshConfig, MeshResult } from '../../src/mesh/types';
 import { checkTriangulation } from './checkTriangulation';
 import { buildTriangulation } from '../../src/mesh/buildTriangulation';
+import { eventLoopTurns } from '../timing';
 import { loadFixture, smallConfig } from './helpers';
 
 const target = loadFixture();
@@ -103,7 +104,7 @@ describe('mesh seed animation', () => {
     runner.start();
     while (runner.frameIndex < 1) await wait(5);
     expect(runner.state).toBe('paused');
-    await wait(80);
+    await eventLoopTurns();
     expect(runner.frameIndex).toBe(1); // frame 1 did not start
     expect(runner.currentFrame()).toBeNull();
     expect(runner.result().frames.length).toBe(1);

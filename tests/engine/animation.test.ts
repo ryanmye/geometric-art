@@ -9,13 +9,10 @@ import {
   shapesAfterPrefix,
 } from '../../src/engine/animationPlan';
 import type { AnimationResult, AnimationSettings, Bitmap, RunConfig, RunnerOptions } from '../../src/engine/types';
+import { eventLoopTurns, LONG_TEST_TIMEOUT } from '../timing';
 import { loadFixture, runToEnd, smallConfig } from './helpers';
 
 const target = loadFixture();
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 interface AnimationRun {
   result: AnimationResult;
@@ -74,8 +71,11 @@ describe('animation planning', () => {
   });
 });
 
-describe('animation runner', () => {
-  const config = smallConfig({ maxShapes: 10, seed: 20 });
+// Each test here makes several whole runs. They check how runs relate to each
+// other (frames, prefixes, splits, pauses), not how good the search is, so a
+// lighter search than smallConfig's keeps them quick.
+describe('animation runner', { timeout: LONG_TEST_TIMEOUT }, () => {
+  const config = smallConfig({ maxShapes: 10, seed: 20, candidates: 8, maxAge: 8 });
   const settings = { frames: 4, shared: 4 };
 
   it('builds the frames as planned', async () => {
@@ -133,6 +133,7 @@ describe('animation runner', () => {
   it('pause and resume across frames give the same result', async () => {
     const uninterrupted = await animate(target, config, settings);
     let finished: AnimationResult | null = null;
+    let reportStop = () => {};
     const runner = createAnimationRunner(
       target,
       config,
@@ -140,24 +141,37 @@ describe('animation runner', () => {
       {
         // Pause in the middle of frame 1 and right at the end of frame 2.
         onShape: (_record, index, frameIndex) => {
-          if (frameIndex === 1 && index === 6) runner.pause();
+          if (frameIndex === 1 && index === 6) {
+            runner.pause();
+            reportStop();
+          }
         },
         onFrameDone: (_frame, frameIndex) => {
-          if (frameIndex === 2) runner.pause();
+          if (frameIndex === 2) {
+            runner.pause();
+            reportStop();
+          }
         },
-        onDone: (result) => (finished = result),
+        onDone: (result) => {
+          finished = result;
+          reportStop();
+        },
       },
       { executor: 'inline' },
     );
-    runner.start();
+    const stopped = () => new Promise<void>((resolve) => (reportStop = resolve));
     for (const expectedFrame of [1, 3]) {
-      while (runner.state === 'running') await wait(5);
-      await wait(100); // make sure it really stays stopped
+      const stop = stopped();
+      runner.start();
+      await stop;
+      await eventLoopTurns(); // make sure it really stays stopped
       expect(runner.state).toBe('paused');
       expect(runner.frameIndex).toBe(expectedFrame);
-      runner.start();
     }
-    while (runner.state !== 'done') await wait(10);
+    const end = stopped();
+    runner.start();
+    await end;
+    expect(runner.state).toBe('done');
     expect(finished).toEqual(uninterrupted.result);
     expect(runner.result()).toEqual(uninterrupted.result);
     expect(runner.currentFrame()).toBeNull();

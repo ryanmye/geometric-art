@@ -23,5 +23,12 @@ export default defineConfig({
   test: {
     // Test files are matched relative to the project root.
     exclude: [...configDefaults.exclude, '**/.*/**'],
+    // Nearly every test is CPU-bound. Tests that take up to 0.6 s on an idle
+    // machine were measured at up to 20 s on a starved one (CI runners have
+    // 2-4 slow cores), well past vitest's 5 s default. 60 s leaves three
+    // times that and still stops a hung test within a minute. The tests that
+    // make several whole engine runs set their own, longer timeout
+    // (tests/timing.ts). No retries: a failure is real.
+    testTimeout: 60_000,
   },
 });

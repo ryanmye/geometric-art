@@ -22,6 +22,7 @@ import { meshToSVG } from '../../src/mesh/toSVG';
 import { clearTouched } from '../../src/mesh/triangulation';
 import type { MeshAnimationResult, MeshConfig, MeshResult, MeshRunnerOptions } from '../../src/mesh/types';
 import { weightingFromOptions } from '../../src/mesh/weights';
+import { LONG_TEST_TIMEOUT } from '../timing';
 import { loadFixture, smallConfig, squaredError } from './helpers';
 
 const target = loadFixture();
@@ -216,7 +217,7 @@ describe('polygon optimiser', () => {
     expect(parseMeshJSON(JSON.stringify(result))).toEqual(result);
   });
 
-  it('is reproducible, and seeds differ', async () => {
+  it('is reproducible, and seeds differ', { timeout: LONG_TEST_TIMEOUT }, async () => {
     const a = await run(polygonConfig());
     const b = await run(polygonConfig());
     const c = await run(polygonConfig({ seed: 8 }));
@@ -249,7 +250,7 @@ describe('polygon optimiser', () => {
   });
 });
 
-describe('polygon animation', () => {
+describe('polygon animation', { timeout: LONG_TEST_TIMEOUT }, () => {
   const config = polygonConfig({ points: 80, generations: 30 });
 
   it('variation 1: frames are the independent runs; frame 0 is the single run', async () => {
@@ -276,7 +277,7 @@ describe('polygon animation', () => {
   });
 });
 
-describe('triangle outputs from before polygons existed', () => {
+describe('triangle outputs from before polygons existed', { timeout: LONG_TEST_TIMEOUT }, () => {
   // SHA-256 of the JSON exports, recorded before weights, animation and polygons were added.
   const pinned: Array<[Partial<MeshConfig>, string]> = [
     [{ seed: 2 }, '0fed864df2e0bc1ea9d11dee1f8af9adf5389ec0b0fa5d4c51d448917d3142c0'],

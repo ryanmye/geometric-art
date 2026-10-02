@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LONG_TEST_TIMEOUT } from '../timing';
 import { loadFixture, runToEnd, smallConfig } from './helpers';
 import { rasterizeResult } from '../../src/engine/rasterizeResult';
 import { createPicture } from '../../src/engine/picture';
@@ -6,7 +7,7 @@ import { fullTotal, totalToScore } from '../../src/engine/score';
 
 const target = loadFixture();
 
-describe('reproducibility', () => {
+describe('reproducibility', { timeout: LONG_TEST_TIMEOUT }, () => {
   it('same target, config and seed give the identical result', async () => {
     const a = await runToEnd(target, smallConfig());
     const b = await runToEnd(target, smallConfig());

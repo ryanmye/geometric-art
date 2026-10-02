@@ -6,6 +6,7 @@ import { beginJournal, commitJournal, undoJournal } from '../../src/mesh/journal
 import { inCircle, orient } from '../../src/mesh/predicates';
 import { removePoint } from '../../src/mesh/removePoint';
 import { clearTouched, type Triangulation } from '../../src/mesh/triangulation';
+import { LONG_TEST_TIMEOUT } from '../timing';
 import { bruteForceOwnerCheck, checkTriangulation } from './checkTriangulation';
 
 /** Corners of a width x height image followed by the given points. */
@@ -42,7 +43,7 @@ describe('predicates', () => {
   });
 });
 
-describe('triangulation covers the image exactly once', () => {
+describe('triangulation covers the image exactly once', { timeout: LONG_TEST_TIMEOUT }, () => {
   const cases: Array<[string, number, number, Array<[number, number]>]> = [
     ['random 300', 171, 256, randomPoints(1, 300, 171, 256)],
     ['random 50 small image', 9, 7, randomPoints(2, 50, 9, 7)],

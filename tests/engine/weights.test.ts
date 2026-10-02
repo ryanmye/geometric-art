@@ -10,6 +10,7 @@ import { createShapeContext, randomShape, rasterizeShape } from '../../src/engin
 import { createRng } from '../../src/engine/rng';
 import { createAnimationRunner } from '../../src/engine/animationRunner';
 import { computeImportance } from '../../src/importance';
+import { LONG_TEST_TIMEOUT } from '../timing';
 import { loadFixture, runToEnd, smallConfig } from './helpers';
 
 const fixture = loadFixture();
@@ -99,8 +100,9 @@ describe('weighted differential score', () => {
   });
 });
 
-describe('weighted runs', () => {
-  const config: RunConfig = smallConfig({ maxShapes: 12, seed: 3 });
+describe('weighted runs', { timeout: LONG_TEST_TIMEOUT }, () => {
+  // How weighted runs relate to each other does not need a thorough search.
+  const config: RunConfig = smallConfig({ maxShapes: 12, seed: 3, candidates: 8, maxAge: 8 });
   const importance = computeImportance(fixture, { strength: 1 });
 
   it('all-ones weights give exactly the unweighted result', async () => {
