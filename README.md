@@ -8,6 +8,8 @@ machine — there is no server, no upload, nothing sent anywhere.
 
 Live site: [ryanmye.github.io/geometric-art](https://ryanmye.github.io/geometric-art/)
 
+Made by [Ryan Ye](https://ryanmye.github.io/).
+
 ![The Mona Lisa, next to the same photo recreated as overlapping shapes, a triangle mesh, and a polygon mosaic](docs/screenshot.png)
 
 The same photo recreated in all three styles (overlapping shapes, triangle mesh, polygon mosaic), next to the original. Sample: Mona Lisa, Leonardo da Vinci, c. 1503-1519, public domain ([source](https://commons.wikimedia.org/wiki/File:Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg)).
